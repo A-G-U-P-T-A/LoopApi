@@ -1,0 +1,7 @@
+fastapi
+sqlalchemy
+async-exit-stack
+async-generator
+requests
+psycopg2-binary
+uvicorn
