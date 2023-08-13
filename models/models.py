@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Time, DateTime
+from sqlalchemy import Column, Integer, String, Time, DateTime, Enum
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -26,3 +26,21 @@ class StoreTimezone(Base):
     id = Column(Integer, primary_key=True)
     store_id = Column(Integer)
     timezone_str = Column(String(50))
+
+
+class ReportStatus(Base):
+    __tablename__ = 'report_status'
+    report_id = Column(String(255), primary_key=True, index=True)
+    status = Column(Enum('queued', 'running', 'complete'), default='queued')
+
+
+class GeneratedReport(Base):
+    __tablename__ = 'generated_reports'
+    report_id = Column(String(255), primary_key=True)
+    store_id = Column(String(255), index=True)
+    uptime_last_hour = Column(Integer)
+    uptime_last_day = Column(Integer)
+    update_last_week = Column(Integer)
+    downtime_last_hour = Column(Integer)
+    downtime_last_day = Column(Integer)
+    downtime_last_week = Column(Integer)

@@ -1,25 +1,27 @@
-from fastapi import APIRouter, HTTPException
-from services.services import download_and_load_data
-import uuid
+from fastapi import APIRouter
+from services.services import get_report_status, get_generated_report, create_report_status, \
+    generate_report_async
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor()
 
 router = APIRouter()
-
-REPORTS = {}
 
 
 @router.post("/trigger_report")
 def trigger_report():
-    report_id = str(uuid.uuid4())
-    REPORTS[report_id] = "Running"
+    report_id = create_report_status()
+    future = executor.submit(generate_report_async, report_id)
     return {"report_id": report_id}
 
 
 @router.get("/get_report")
 def get_report(report_id: str):
-    status = REPORTS.get(report_id)
-    if status == "Running":
-        return {"status": "Running"}
-    elif status == "Complete":
-        pass
+    status = get_report_status(report_id)
+    if status and status.status == 'complete':
+        report = get_generated_report(report_id)
+        return {"status": "Complete", "report": report.report_data}
+    elif status:
+        return {"status": status.status}
     else:
-        raise HTTPException(status_code=404, detail="Report not found")
+        return {"status": "Not Found"}

@@ -1,10 +1,11 @@
 import csv
+from uuid import uuid4
 
 import gdown
 import requests
 import logging
-from models.models import StoreStatus, BusinessHours, StoreTimezone
-from db.db import SessionLocal
+from models.models import StoreStatus, BusinessHours, StoreTimezone, ReportStatus, GeneratedReport
+from db.db import SessionLocal, clear_tables, init_db
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,6 +15,7 @@ URL3 = 'https://drive.google.com/file/d/101P9quxHoMZMZCVWQ5o-shonk2lgK1-o/view?u
 
 
 def download_and_load_data():
+    init_db()
     logging.info('Starting download and load process.')
     download_and_load(URL1, StoreStatus, ['store_id', 'timestamp_utc', 'status'])
     download_and_load(URL2, BusinessHours, ['store_id', 'day', 'start_time_local', 'end_time_local'])
@@ -44,3 +46,64 @@ def download_and_load(url, model_class, columns):
             db.commit()
 
     logging.info("Process completed for this URL.")
+
+
+def create_report_status():
+    report_id = str(uuid4())
+    with SessionLocal() as db:
+        db.add(ReportStatus(report_id=report_id))
+        db.commit()
+    return report_id
+
+
+def update_report_status(report_id, status):
+    with SessionLocal() as db:
+        report_status = db.query(ReportStatus).filter(ReportStatus.report_id == report_id).first()
+        report_status.status = status
+        db.commit()
+
+
+def get_report_status(report_id):
+    with SessionLocal() as db:
+        return db.query(ReportStatus).filter(ReportStatus.report_id == report_id).first()
+
+
+def save_generated_report(report_id, report_data):
+    with SessionLocal() as db:
+        db.add(GeneratedReport(report_id=report_id, report_data=report_data))
+        db.commit()
+
+
+def get_generated_report(report_id):
+    with SessionLocal() as db:
+        return db.query(GeneratedReport).filter(GeneratedReport.report_id == report_id).first()
+
+
+def generate_report_async(report_id):
+    # Set the status to running
+    with SessionLocal() as db:
+        status = db.query(ReportStatus).filter(ReportStatus.report_id == report_id).first()
+        status.status = 'running'
+        db.commit()
+
+    # Generate the report here according to the specifications
+    # ...
+    report_data = {
+        'store_id': '123',
+        'uptime_last_hour': 50.0,
+        'uptime_last_day': 12.0,
+        'update_last_week': 80.0,
+        'downtime_last_hour': 10.0,
+        'downtime_last_day': 2.0,
+        'downtime_last_week': 5.0
+    }
+    # Save the report and update the status to complete
+    with SessionLocal() as db:
+        db.add(GeneratedReport(report_id=report_id, report_data=report_data))
+        status = db.query(ReportStatus).filter(ReportStatus.report_id == report_id).first()
+        status.status = 'complete'
+        db.commit()
+
+
+def clear_db_data():
+    clear_tables()
