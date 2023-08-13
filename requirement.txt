@@ -5,3 +5,6 @@ async-generator
 requests
 psycopg2-binary
 uvicorn
+mysqlclient
+apscheduler
+gdown
